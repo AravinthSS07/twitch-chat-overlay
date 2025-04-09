@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Twitch Chat Overlay Settings</title>
+  <style>
+    /* Modern dark theme */
+    :root {
+      --bg-color: #1a1a1a;
+      --card-bg: #252525;
+      --text-color: #e0e0e0;
+      --text-secondary: #a0a0a0;
+      --accent-color: #9146FF;
+      --accent-hover: #7a30d1;
+      --border-color: #333333;
+      --input-bg: #333333;
+      --input-border: #444444;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --error-color: #ff5252;
+      --success-color: #4caf50;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      line-height: 1.6;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    
+    h1, h2, h3 {
+      color: var(--text-color);
+      font-weight: 500;
+      margin-bottom: 0.8em;
+    }
+    
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+      border-bottom: 2px solid var(--accent-color);
+      padding-bottom: 10px;
+      display: inline-block;
+    }
+    
+    h2 {
+      font-size: 1.4rem;
+      margin-top: 1.5rem;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    
+    /* Modern tabs */
+    .tab-buttons {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1px;
+      gap: 8px;
+    }
+    
+    .tab-button {
+      background: transparent;
+      padding: 12px 20px;
+      cursor: pointer;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 16px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    
+    .tab-button.active {
+      color: var(--accent-color);
+    }
+    
+    .tab-button:focus {
+      outline: none;
+    }
+    
+    .tab-button:hover {
+      color: var(--text-color);
+    }
+    
+    .tab-button.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--accent-color);
+      border-radius: 3px 3px 0 0;
+    }
+    
+    .tab-content {
+      display: none;
+      padding: 20px 0;
+    }
+    
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    /* Form styling */
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text-color);
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      transition: border-color 0.2s ease;
+      font-size: 15px;
+    }
+    
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 2px rgba(145, 70, 255, 0.2);
+    }
+    
+    input[type="checkbox"] {
+      width: auto;
+      margin-right: 8px;
+      accent-color: var(--accent-color);
+    }
+    
+    input[type="range"] {
+      background: var(--input-bg);
+      height: 6px;
+      border-radius: 3px;
+      -webkit-appearance: none;
+      margin-top: 8px;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+      border: none;
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+      border: none;
+    }
+    
+    input[type="color"] {
+      height: 40px;
+      width: 60px;
+      padding: 0;
+      border: none;
+      background: none;
+    }
+    
+    .input-group {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .input-group div {
+      flex: 1;
+    }
+    
+    button {
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+    
+    button:hover {
+      background-color: var(--accent-hover);
+    }
+    
+    button:active {
+      transform: translateY(1px);
+    }
+    
+    .color-preview {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      vertical-align: middle;
+      margin-left: 10px;
+      border: 2px solid var(--input-border);
+    }
+    
+    .slider-value {
+      display: inline-block;
+      width: 45px;
+      text-align: right;
+      margin-left: 10px;
+      color: var(--text-secondary);
+    }
+    
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    
+    /* Position presets */
+    .positions-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .position-preset {
+      width: 100%;
+      aspect-ratio: 4/3;
+      border: 1px solid var(--input-border);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      background: var(--input-bg);
+      transition: all 0.2s ease;
+    }
+    
+    .position-preset:hover {
+      border-color: var(--accent-color);
+      background: rgba(145, 70, 255, 0.1);
+    }
+    
+    .position-preset.active {
+      border: 2px solid var(--accent-color);
+      background: rgba(145, 70, 255, 0.15);
+    }
+    
+    .overlay-preview {
+      width: 30px;
+      height: 40px;
+      background: rgba(145, 70, 255, 0.6);
+      border-radius: 3px;
+      position: absolute;
+    }
+    
+    /* Preset positions */
+    .top-left .overlay-preview { top: 5px; left: 5px; }
+    .top-right .overlay-preview { top: 5px; right: 5px; }
+    .bottom-left .overlay-preview { bottom: 5px; left: 5px; }
+    .bottom-right .overlay-preview { bottom: 5px; right: 5px; }
+    .center .overlay-preview { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    .top-center .overlay-preview { top: 5px; left: 50%; transform: translateX(-50%); }
+    .bottom-center .overlay-preview { bottom: 5px; left: 50%; transform: translateX(-50%); }
+    .left-center .overlay-preview { top: 50%; left: 5px; transform: translateY(-50%); }
+    .right-center .overlay-preview { top: 50%; right: 5px; transform: translateY(-50%); }
+    
+    /* Status messages */
+    .status-message {
+      padding: 10px;
+      margin: 15px 0;
+      border-radius: 6px;
+      font-size: 14px;
+      display: none;
+    }
+    
+    .status-success {
+      background-color: rgba(76, 175, 80, 0.1);
+      color: var(--success-color);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+      display: block;
+    }
+    
+    .status-error {
+      background-color: rgba(255, 82, 82, 0.1);
+      color: var(--error-color);
+      border: 1px solid rgba(255, 82, 82, 0.3);
+      display: block;
+    }
+    
+    /* Help box */
+    .help-box {
+      margin-top: 25px;
+      padding: 15px;
+      border-radius: 6px;
+      background-color: rgba(145, 70, 255, 0.1);
+      border-left: 4px solid var(--accent-color);
+    }
+    
+    .help-box h3 {
+      margin-top: 0;
+      color: var(--accent-color);
+    }
+    
+    .help-box p {
+      margin: 5px 0;
+      color: var(--text-secondary);
+    }
+    
+    .help-box strong {
+      color: var(--text-color);
+    }
+    
+    /* Action buttons */
+    .action-button {
+      background-color: var(--input-bg);
+      border: 1px solid var(--input-border);
+      color: var(--text-color);
+      padding: 10px 15px;
+    }
+    
+    .action-button:hover {
+      background-color: rgba(145, 70, 255, 0.1);
+      border-color: var(--accent-color);
+    }
+    
+    /* Animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .input-group {
+        flex-direction: column;
+        gap: 10px;
+      }
+      
+      .positions-container {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Debug info for troubleshooting */
+    .debug-info {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #333;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #ccc;
+      max-height: 200px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Twitch Chat Overlay</h1>
+    
+    <!-- Status message container -->
+    <div id="statusMessage" class="status-message"></div>
+    
+    <!-- Tab Navigation -->
+    <div class="tab-buttons">
+      <button class="tab-button active" data-tab="chat-settings">Chat Settings</button>
+      <button class="tab-button" data-tab="overlay-settings">Overlay Settings</button>
+    </div>
+    
+    <!-- Chat Settings Tab -->
+    <div class="tab-content active" id="chat-settings">
+      <div class="form-group">
+        <label for="channel">Twitch Channel:</label>
+        <input type="text" id="channel" placeholder="Enter Twitch channel name (without @)">
+      </div>
+      
+      <h2>Appearance</h2>
+      <div class="form-group">
+        <label for="fontSize">Font Size:</label>
+        <input type="range" id="fontSize" min="10" max="24" value="14">
+        <span class="slider-value" id="fontSizeValue">14px</span>
+      </div>
+      
+      <div class="form-group">
+        <label for="backgroundColor">Background Color:</label>
+        <input type="color" id="backgroundColor" value="#181818">
+        <span class="color-preview" id="bgColorPreview"></span>
+      </div>
+      
+      <div class="form-group">
+        <label for="backgroundOpacity">Background Opacity:</label>
+        <input type="range" id="backgroundOpacity" min="0" max="100" value="70">
+        <span class="slider-value" id="backgroundOpacityValue">70%</span>
+      </div>
+      
+      <div class="form-group">
+        <label for="messageLimit">Maximum Messages:</label>
+        <input type="number" id="messageLimit" min="5" max="100" value="20">
+      </div>
+      
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="showTimestamps">
+          Show Timestamps
+        </label>
+      </div>
+    </div>
+    
+    <!-- Overlay Settings Tab -->
+    <div class="tab-content" id="overlay-settings">
+      <h2>Overlay Position & Size</h2>
+      
+      <div class="form-group">
+        <button id="toggleOverlayBtn" class="action-button">
+          <span id="overlayStatusText">Hide Overlay</span>
+        </button>
+      </div>
+      
+      <div class="form-group">
+        <label>Position Presets:</label>
+        <div class="positions-container">
+          <div class="position-preset top-left" data-position="top-left">
+            <div class="overlay-preview"></div>
+          </div>
+          <div class="position-preset top-center" data-position="top-center">
+            <div class="overlay-preview"></div>
+          </div>
+          <div class="position-preset top-right" data-position="top-right">
+            <div class="overlay-preview"></div>
+          </div>
+          <div class="position-preset left-center" data-position="left-center">
+            <div class="overlay-preview"></div>
+          </div>
+          <div class="position-preset center" data-position="center">
+            <div class="overlay-preview"></div>
+          </div>
+          <div class="position-preset right-center" data-position="right-center">
+            <div class="overlay-preview"></div>
+          </div>
+          <div class="position-preset bottom-left" data-position="bottom-left">
+            <div class="overlay-preview"></div>
+          </div>
+          <div class="position-preset bottom-center" data-position="bottom-center">
+            <div class="overlay-preview"></div>
+          </div>
+          <div class="position-preset bottom-right" data-position="bottom-right">
+            <div class="overlay-preview"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Custom Position:</label>
+        <div class="input-group">
+          <div>
+            <label for="overlayX">X Position:</label>
+            <input type="number" id="overlayX" value="20">
+          </div>
+          <div>
+            <label for="overlayY">Y Position:</label>
+            <input type="number" id="overlayY" value="20">
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Overlay Size:</label>
+        <div class="input-group">
+          <div>
+            <label for="overlayWidth">Width:</label>
+            <input type="number" id="overlayWidth" min="150" value="350">
+          </div>
+          <div>
+            <label for="overlayHeight">Height:</label>
+            <input type="number" id="overlayHeight" min="100" value="500">
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="startHidden">
+          Start with overlay hidden
+        </label>
+      </div>
+    </div>
+    
+    <button id="saveButton">Save Settings</button>
+    
+    <div class="help-box">
+      <h3>How to use the overlay</h3>
+      <p>1. Enter a Twitch channel name above and click Save</p>
+      <p>2. Press and hold <strong>Alt+Backspace</strong> to interact with the overlay</p>
+      <p>3. When Alt is held, drag the top purple bar to move</p>
+      <p>4. When Alt is held, drag the bottom-right corner to resize</p>
+      <p>5. Release Alt to make the overlay click-through</p>
+    </div>
+    
+    <!-- Debug info for troubleshooting -->
+    <div id="debugInfo" class="debug-info" style="display: none;"></div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM content loaded');
+      
+      // Tab switching functionality - FIXED
+      const tabButtons = document.querySelectorAll('.tab-button');
+      const tabContents = document.querySelectorAll('.tab-content');
+      
+      // Status message handling
+      const statusMessage = document.getElementById('statusMessage');
+      
+      function showStatus(message, type) {
+        statusMessage.textContent = message;
+        statusMessage.className = 'status-message';
+        statusMessage.classList.add(`status-${type}`);
+        
+        // Auto-hide success messages after 5 seconds
+        if (type === 'success') {
+          setTimeout(() => {
+            statusMessage.className = 'status-message';
+          }, 5000);
+        }
+      }
+      
+      // Debug logging
+      const debugInfo = document.getElementById('debugInfo');
+      
+      function logDebug(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.textContent = `[${timestamp}] ${message}`;
+        debugInfo.appendChild(logEntry);
+        debugInfo.scrollTop = debugInfo.scrollHeight;
+      }
+      
+      // Show debug info on triple click on the header
+      document.querySelector('h1').addEventListener('click', (e) => {
+        if (e.detail === 3) {
+          debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+      
+      // Fix tab switching
+      tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const tabId = button.getAttribute('data-tab');
+          logDebug(`Tab clicked: ${tabId}`);
+          
+          // Remove active class from all buttons and tabs
+          tabButtons.forEach(btn => btn.classList.remove('active'));
+          tabContents.forEach(content => content.classList.remove('active'));
+          
+          // Add active class to current button and tab
+          button.classList.add('active');
+          const tabContent = document.getElementById(tabId);
+          if (tabContent) {
+            tabContent.classList.add('active');
+          } else {
+            logDebug(`ERROR: Tab content not found: ${tabId}`);
+          }
+        });
+      });
+      
+      // DOM elements
+      const channelInput = document.getElementById('channel');
+      const fontSizeSlider = document.getElementById('fontSize');
+      const fontSizeValue = document.getElementById('fontSizeValue');
+      const bgColorPicker = document.getElementById('backgroundColor');
+      const bgColorPreview = document.getElementById('bgColorPreview');
+      const bgOpacitySlider = document.getElementById('backgroundOpacity');
+      const bgOpacityValue = document.getElementById('backgroundOpacityValue');
+      const messageLimitInput = document.getElementById('messageLimit');
+      const showTimestampsCheckbox = document.getElementById('showTimestamps');
+      const overlayXInput = document.getElementById('overlayX');
+      const overlayYInput = document.getElementById('overlayY');
+      const overlayWidthInput = document.getElementById('overlayWidth');
+      const overlayHeightInput = document.getElementById('overlayHeight');
+      const startHiddenCheckbox = document.getElementById('startHidden');
+      const saveButton = document.getElementById('saveButton');
+      const positionPresets = document.querySelectorAll('.position-preset');
+      const toggleOverlayBtn = document.getElementById('toggleOverlayBtn');
+      const overlayStatusText = document.getElementById('overlayStatusText');
+      
+      // Initialize overlay visibility state
+      let isOverlayVisible = true;
+      
+      // Listen for overlay visibility changes from main process
+      if (window.electronAPI && window.electronAPI.onOverlayVisibilityChanged) {
+        window.electronAPI.onOverlayVisibilityChanged((visible) => {
+          isOverlayVisible = visible;
+          overlayStatusText.textContent = isOverlayVisible ? 'Hide Overlay' : 'Show Overlay';
+          logDebug(`Overlay visibility updated: ${isOverlayVisible}`);
+        });
+      } else {
+        logDebug('WARNING: electronAPI.onOverlayVisibilityChanged is not available');
+      }
+      
+      // Handle toggle overlay button
+      if (toggleOverlayBtn) {
+        toggleOverlayBtn.addEventListener('click', () => {
+          if (window.electronAPI && window.electronAPI.toggleOverlay) {
+            window.electronAPI.toggleOverlay();
+            logDebug('Toggle overlay clicked');
+          } else {
+            logDebug('ERROR: electronAPI.toggleOverlay is not available');
+            showStatus('Overlay toggle functionality not available', 'error');
+          }
+        });
+      }
+      
+      // Listen for "show settings tab" event from menu
+      if (window.electronAPI && window.electronAPI.onShowSettingsTab) {
+        window.electronAPI.onShowSettingsTab(() => {
+          document.querySelector('.tab-button[data-tab="overlay-settings"]').click();
+          logDebug('Showing overlay settings tab by request');
+        });
+      }
+      
+      // Listen for overlay settings updates
+      if (window.electronAPI && window.electronAPI.onOverlaySettingsUpdated) {
+        window.electronAPI.onOverlaySettingsUpdated((settings) => {
+          overlayXInput.value = settings.x;
+          overlayYInput.value = settings.y;
+          overlayWidthInput.value = settings.width;
+          overlayHeightInput.value = settings.height;
+          
+          logDebug(`Overlay settings updated: ${JSON.stringify(settings)}`);
+          
+          // Update position preset selection
+          updatePositionPresetSelection();
+        });
+      }
+      
+      // Position presets handling
+      positionPresets.forEach(preset => {
+        preset.addEventListener('click', () => {
+          // Remove active class from all presets
+          positionPresets.forEach(p => p.classList.remove('active'));
+          
+          // Add active class to clicked preset
+          preset.classList.add('active');
+          
+          // Set position values based on preset
+          const position = preset.dataset.position;
+          const screenWidth = window.screen.width;
+          const screenHeight = window.screen.height;
+          
+          // Default overlay size
+          const width = parseInt(overlayWidthInput.value) || 350;
+          const height = parseInt(overlayHeightInput.value) || 500;
+          
+          logDebug(`Position preset clicked: ${position}`);
+          
+          // Calculate positions based on screen dimensions and preset
+          switch(position) {
+            case 'top-left':
+              overlayXInput.value = 20;
+              overlayYInput.value = 20;
+              break;
+            case 'top-center':
+              overlayXInput.value = Math.round((screenWidth - width) / 2);
+              overlayYInput.value = 20;
+              break;
+            case 'top-right':
+              overlayXInput.value = screenWidth - width - 20;
+              overlayYInput.value = 20;
+              break;
+            case 'left-center':
+              overlayXInput.value = 20;
+              overlayYInput.value = Math.round((screenHeight - height) / 2);
+              break;
+            case 'center':
+              overlayXInput.value = Math.round((screenWidth - width) / 2);
+              overlayYInput.value = Math.round((screenHeight - height) / 2);
+              break;
+            case 'right-center':
+              overlayXInput.value = screenWidth - width - 20;
+              overlayYInput.value = Math.round((screenHeight - height) / 2);
+              break;
+            case 'bottom-left':
+              overlayXInput.value = 20;
+              overlayYInput.value = screenHeight - height - 60; // Account for taskbar
+              break;
+            case 'bottom-center':
+              overlayXInput.value = Math.round((screenWidth - width) / 2);
+              overlayYInput.value = screenHeight - height - 60; // Account for taskbar
+              break;
+            case 'bottom-right':
+              overlayXInput.value = screenWidth - width - 20;
+              overlayYInput.value = screenHeight - height - 60; // Account for taskbar
+              break;
+          }
+        });
+      });
+      
+      // Load saved settings
+      const loadSavedSettings = () => {
+        try {
+          // Chat settings
+          channelInput.value = localStorage.getItem('twitchChannel') || '';
+          
+          fontSizeSlider.value = localStorage.getItem('fontSize') || '14';
+          fontSizeValue.textContent = `${fontSizeSlider.value}px`;
+          
+          bgColorPicker.value = localStorage.getItem('backgroundColor') || '#181818';
+          bgColorPreview.style.backgroundColor = bgColorPicker.value;
+          
+          bgOpacitySlider.value = localStorage.getItem('backgroundOpacity') || '70';
+          bgOpacityValue.textContent = `${bgOpacitySlider.value}%`;
+          
+          messageLimitInput.value = localStorage.getItem('messageLimit') || '20';
+          
+          showTimestampsCheckbox.checked = localStorage.getItem('showTimestamps') === 'true';
+          
+          // Overlay settings
+          overlayXInput.value = localStorage.getItem('overlay.x') || '20';
+          overlayYInput.value = localStorage.getItem('overlay.y') || '20';
+          overlayWidthInput.value = localStorage.getItem('overlay.width') || '350';
+          overlayHeightInput.value = localStorage.getItem('overlay.height') || '500';
+          startHiddenCheckbox.checked = localStorage.getItem('overlay.startHidden') === 'true';
+          
+          logDebug('Settings loaded from localStorage');
+          
+          // Try to highlight the matching position preset
+          updatePositionPresetSelection();
+        } catch (error) {
+          logDebug(`Error loading settings: ${error.message}`);
+          showStatus('Error loading settings. Using defaults.', 'error');
+        }
+      };
+      
+      function updatePositionPresetSelection() {
+        try {
+          const x = parseInt(overlayXInput.value);
+          const y = parseInt(overlayYInput.value);
+          const screenWidth = window.innerWidth || window.screen.width;
+          const screenHeight = window.innerHeight || window.screen.height;
+          const width = parseInt(overlayWidthInput.value);
+          const height = parseInt(overlayHeightInput.value);
+          
+          // Clear existing selection
+          positionPresets.forEach(p => p.classList.remove('active'));
+          
+          // Find matching preset (approximate match)
+          if (x <= 30 && y <= 30) {
+            document.querySelector('.position-preset.top-left').classList.add('active');
+          } else if (x > screenWidth - width - 30 && y <= 30) {
+            document.querySelector('.position-preset.top-right').classList.add('active');
+          } else if (x <= 30 && y > screenHeight - height - 70) {
+            document.querySelector('.position-preset.bottom-left').classList.add('active');
+          } else if (x > screenWidth - width - 30 && y > screenHeight - height - 70) {
+            document.querySelector('.position-preset.bottom-right').classList.add('active');
+          } else if (Math.abs(x - (screenWidth - width) / 2) < 30 && y <= 30) {
+            document.querySelector('.position-preset.top-center').classList.add('active');
+          } else if (Math.abs(x - (screenWidth - width) / 2) < 30 && y > screenHeight - height - 70) {
+            document.querySelector('.position-preset.bottom-center').classList.add('active');
+          } else if (x <= 30 && Math.abs(y - (screenHeight - height) / 2) < 30) {
+            document.querySelector('.position-preset.left-center').classList.add('active');
+          } else if (x > screenWidth - width - 30 && Math.abs(y - (screenHeight - height) / 2) < 30) {
+            document.querySelector('.position-preset.right-center').classList.add('active');
+          } else if (Math.abs(x - (screenWidth - width) / 2) < 30 && Math.abs(y - (screenHeight - height) / 2) < 30) {
+            document.querySelector('.position-preset.center').classList.add('active');
+          }
+        } catch (error) {
+          logDebug(`Error updating position preset: ${error.message}`);
+        }
+      }
+      
+      // Update UI on input changes
+      fontSizeSlider.addEventListener('input', () => {
+        fontSizeValue.textContent = `${fontSizeSlider.value}px`;
+      });
+      
+      bgColorPicker.addEventListener('input', () => {
+        bgColorPreview.style.backgroundColor = bgColorPicker.value;
+      });
+      
+      bgOpacitySlider.addEventListener('input', () => {
+        bgOpacityValue.textContent = `${bgOpacitySlider.value}%`;
+      });
+      
+      // Save settings
+      saveButton.addEventListener('click', () => {
+        try {
+          const settings = {
+            channel: channelInput.value.trim(),
+            chatSettings: {
+              fontSize: fontSizeSlider.value,
+              backgroundColor: bgColorPicker.value,
+              backgroundOpacity: bgOpacitySlider.value,
+              messageLimit: messageLimitInput.value,
+              showTimestamps: showTimestampsCheckbox.checked
+            },
+            overlaySettings: {
+              x: overlayXInput.value,
+              y: overlayYInput.value,
+              width: overlayWidthInput.value,
+              height: overlayHeightInput.value,
+              startHidden: startHiddenCheckbox.checked
+            }
+          };
+          
+          // Validate settings
+          if (settings.channel === '') {
+            showStatus('Please enter a Twitch channel name', 'error');
+            return;
+          }
+          
+          // Save to localStorage
+          localStorage.setItem('twitchChannel', settings.channel);
+          localStorage.setItem('fontSize', settings.chatSettings.fontSize);
+          localStorage.setItem('backgroundColor', settings.chatSettings.backgroundColor);
+          localStorage.setItem('backgroundOpacity', settings.chatSettings.backgroundOpacity);
+          localStorage.setItem('messageLimit', settings.chatSettings.messageLimit);
+          localStorage.setItem('showTimestamps', settings.chatSettings.showTimestamps);
+          
+          localStorage.setItem('overlay.x', settings.overlaySettings.x);
+          localStorage.setItem('overlay.y', settings.overlaySettings.y);
+          localStorage.setItem('overlay.width', settings.overlaySettings.width);
+          localStorage.setItem('overlay.height', settings.overlaySettings.height);
+          localStorage.setItem('overlay.startHidden', settings.overlaySettings.startHidden);
+          
+          logDebug(`Settings saved: ${JSON.stringify(settings)}`);
+          
+          // Send to main process
+          if (window.electronAPI && window.electronAPI.updateSettings) {
+            window.electronAPI.updateSettings(settings);
+            showStatus('Settings saved successfully!', 'success');
+          } else {
+            logDebug('ERROR: electronAPI.updateSettings is not available');
+            showStatus('Failed to update settings: API not available', 'error');
+          }
+        } catch (error) {
+          logDebug(`Error saving settings: ${error.message}`);
+          showStatus('Failed to save settings. Check console for details.', 'error');
+        }
+      });
+      
+      // Load settings on page load
+      loadSavedSettings();
+      logDebug('Settings page initialized');
+    });
+  </script>
+</body>
+</html>

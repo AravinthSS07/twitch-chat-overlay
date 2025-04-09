@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Twitch Chat Overlay</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 10px;
+      font-family: Arial, sans-serif;
+      color: #fff;
+      overflow: hidden;
+      user-select: none;
+      background-color: rgba(24, 24, 24, 0.7);
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+      scroll-behavior: smooth;
+      padding-bottom: 20px;
+      margin: 0;
+    }
+    
+    .chat-message {
+      margin-bottom: 8px;
+      animation: fadeIn 0.3s ease-in;
+      word-wrap: break-word;
+      line-height: 1.4;
+      width: 100%;
+      overflow-wrap: break-word;
+      hyphens: auto;
+    }
+    
+    .username {
+      font-weight: bold;
+      margin-right: 5px;
+    }
+    
+    .timestamp {
+      color: #999;
+      font-size: 0.8em;
+      margin-right: 5px;
+    }
+    
+    .message {
+      vertical-align: middle;
+    }
+    
+    .emote {
+      vertical-align: middle;
+      margin: -5px 0;
+    }
+    
+    .drag-handle {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 20px;
+      cursor: move;
+      background-color: rgba(100, 65, 165, 0.7);
+      display: none;
+      border-top-left-radius: 5px;
+      border-top-right-radius: 5px;
+      z-index: 1000;
+    }
+    
+    .resize-handle {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 20px;
+      height: 20px;
+      cursor: nwse-resize;
+      background-color: rgba(100, 65, 165, 0.7);
+      display: none;
+      border-radius: 3px;
+      z-index: 1000;
+    }
+    
+    body.alt-active {
+      outline: 2px solid #9146FF;
+    }
+    
+    body.alt-active .drag-handle,
+    body.alt-active .resize-handle {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 5px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .status-message {
+      position: absolute;
+      bottom: 30px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 1001;
+      pointer-events: none;
+    }
+    
+    .status-message.visible {
+      opacity: 1;
+    }
+    
+    .auto-scroll-toggle {
+      position: absolute;
+      top: 25px;
+      right: 10px;
+      background-color: rgba(100, 65, 165, 0.7);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 1001;
+    }
+    
+    .auto-scroll-toggle.paused {
+      background-color: rgba(220, 80, 80, 0.7);
+    }
+    
+    .auto-scroll-toggle:hover,
+    .auto-scroll-toggle.visible {
+      opacity: 1;
+    }
+    
+    .new-messages-indicator {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(100, 65, 165, 0.9);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+    }
+    
+    .new-messages-indicator.visible {
+      opacity: 1;
+    }
+    
+    .new-messages-indicator:before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      background-color: #00FF00;
+      border-radius: 50%;
+      margin-right: 6px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="drag-handle"></div>
+  <div class="resize-handle"></div>
+  <div class="chat-container" id="chatContainer"></div>
+  <div class="status-message" id="statusMessage">Press Alt+Backspace to interact</div>
+  <button class="auto-scroll-toggle" id="autoScrollToggle">Auto-Scroll: ON</button>
+  <div class="new-messages-indicator" id="newMessagesIndicator">New messages</div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const chatContainer = document.getElementById('chatContainer');
+      const statusMessage = document.getElementById('statusMessage');
+      const dragHandle = document.querySelector('.drag-handle');
+      const resizeHandle = document.querySelector('.resize-handle');
+      const autoScrollToggle = document.getElementById('autoScrollToggle');
+      const newMessagesIndicator = document.getElementById('newMessagesIndicator');
+      
+      let settings = {
+        fontSize: 14,
+        backgroundColor: '#181818',
+        backgroundOpacity: 70,
+        messageLimit: 20,
+        showTimestamps: false
+      };
+      
+      let altPressed = false;
+      let isDragging = false;
+      let isResizing = false;
+      let startX = 0, startY = 0;
+      
+      let autoScrollEnabled = true;
+      let newMessagesCount = 0;
+      let userHasScrolled = false;
+      let autoScrollPaused = false;
+      let scrollPauseTimeout = null;
+      
+      applySettings();
+      
+      window.electronAPI.onChatMessage((message) => {
+        addChatMessage(message);
+      });
+      
+      window.electronAPI.onSettingsUpdated((newSettings) => {
+        settings = {...settings, ...newSettings.chatSettings};
+        applySettings();
+      });
+      
+      function forceScrollToBottom() {
+        setTimeout(() => {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }, 10);
+      }
+      
+      function applySettings() {
+        document.body.style.fontSize = `${settings.fontSize}px`;
+        document.body.style.backgroundColor = hexToRgba(settings.backgroundColor, settings.backgroundOpacity / 100);
+        
+        while (chatContainer.childElementCount > settings.messageLimit) {
+          chatContainer.removeChild(chatContainer.firstChild);
+        }
+        
+        adjustChatContainerSize();
+        forceScrollToBottom();
+      }
+      
+      function adjustChatContainerSize() {
+        const viewportHeight = window.innerHeight;
+        const topOffset = 10;
+        const bottomOffset = 10;
+        
+        chatContainer.style.maxHeight = `${viewportHeight - topOffset - bottomOffset}px`;
+        
+        Array.from(chatContainer.children).forEach(message => {
+          if (message.scrollWidth > chatContainer.clientWidth) {
+            message.style.maxWidth = '100%';
+          }
+        });
+      }
+      
+      function addChatMessage(chatMsg) {
+        const messageEl = document.createElement('div');
+        messageEl.className = 'chat-message';
+        
+        let messageHTML = '';
+        
+        if (settings.showTimestamps) {
+          const time = new Date(chatMsg.timestamp);
+          messageHTML += `<span class="timestamp">[${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}]</span>`;
+        }
+        
+        messageHTML += `<span class="username" style="color: ${chatMsg.color || '#FFFFFF'}">${chatMsg.username}:</span>`;
+        
+        let message = chatMsg.message;
+        
+        if (chatMsg.emotes) {
+          const emotePositions = [];
+          for (const [emoteId, positions] of Object.entries(chatMsg.emotes)) {
+            positions.forEach(position => {
+              const [start, end] = position.split('-').map(Number);
+              emotePositions.push({
+                id: emoteId,
+                start,
+                end,
+                text: chatMsg.message.substring(start, end + 1)
+              });
+            });
+          }
+          
+          emotePositions.sort((a, b) => b.start - a.start);
+          
+          emotePositions.forEach(emote => {
+            const emoteUrl = `https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/default/dark/3.0`;
+            const emoteHtml = `<img class="emote" src="${emoteUrl}" alt="${emote.text}" title="${emote.text}" />`;
+            message = message.substring(0, emote.start) + emoteHtml + message.substring(emote.end + 1);
+          });
+        }
+        
+        messageHTML += `<span class="message">${message}</span>`;
+        
+        messageEl.innerHTML = messageHTML;
+        chatContainer.appendChild(messageEl);
+        
+        while (chatContainer.childElementCount > settings.messageLimit) {
+          chatContainer.removeChild(chatContainer.firstChild);
+        }
+        
+        adjustChatContainerSize();
+        
+        if (!autoScrollPaused) {
+          scrollToBottom(true);
+        } else {
+          newMessagesCount++;
+          updateNewMessagesIndicator();
+        }
+      }
+      
+      function hexToRgba(hex, opacity) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+      }
+      
+      function showStatus(message, duration = 3000) {
+        statusMessage.textContent = message;
+        statusMessage.classList.add('visible');
+        
+        setTimeout(() => {
+          statusMessage.classList.remove('visible');
+        }, duration);
+      }
+      
+      function setInteractionMode(active) {
+        altPressed = active;
+        document.body.classList.toggle('alt-active', active);
+        window.electronAPI.setIgnoreMouseEvents(!active);
+        
+        if (active) {
+          showStatus('Overlay is now interactive');
+        } else {
+          isDragging = false;
+          isResizing = false;
+        }
+      }
+      
+      function isScrolledToBottom() {
+        const scrollTop = chatContainer.scrollTop;
+        const scrollHeight = chatContainer.scrollHeight;
+        const clientHeight = chatContainer.clientHeight;
+        
+        return scrollHeight - scrollTop - clientHeight <= 20;
+      }
+      
+      function scrollToBottom(force = false) {
+        if ((autoScrollEnabled && !autoScrollPaused) || force) {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+          forceScrollToBottom();
+          
+          if (newMessagesCount > 0) {
+            newMessagesCount = 0;
+            updateNewMessagesIndicator();
+          }
+        }
+      }
+      
+      function toggleAutoScroll() {
+        autoScrollEnabled = !autoScrollEnabled;
+        autoScrollPaused = !autoScrollEnabled;
+        
+        autoScrollToggle.textContent = `Auto-Scroll: ${autoScrollEnabled ? 'ON' : 'OFF'}`;
+        autoScrollToggle.classList.toggle('paused', !autoScrollEnabled);
+        
+        if (autoScrollEnabled) {
+          scrollToBottom(true);
+        }
+        
+        showStatus(`Auto-scroll ${autoScrollEnabled ? 'enabled' : 'disabled'}`);
+      }
+      
+      function updateNewMessagesIndicator() {
+        if (newMessagesCount > 0) {
+          newMessagesIndicator.textContent = `${newMessagesCount} new message${newMessagesCount > 1 ? 's' : ''}`;
+          newMessagesIndicator.classList.add('visible');
+        } else {
+          newMessagesIndicator.classList.remove('visible');
+        }
+      }
+      
+      function resetScrollTimeout() {
+        if (scrollPauseTimeout) {
+          clearTimeout(scrollPauseTimeout);
+        }
+        
+        scrollPauseTimeout = setTimeout(() => {
+          if (autoScrollPaused && autoScrollEnabled) {
+            autoScrollPaused = false;
+            scrollToBottom(true);
+            showStatus("Auto-scroll resumed after inactivity");
+          }
+        }, 15000);
+      }
+      
+      autoScrollToggle.addEventListener('click', toggleAutoScroll);
+      
+      chatContainer.addEventListener('scroll', () => {
+        if (!isScrolledToBottom()) {
+          userHasScrolled = true;
+          autoScrollPaused = true;
+          autoScrollToggle.classList.add('visible');
+          resetScrollTimeout();
+        } else if (userHasScrolled) {
+          userHasScrolled = false;
+          autoScrollPaused = false;
+          
+          if (autoScrollEnabled) {
+            setTimeout(() => {
+              if (!userHasScrolled) {
+                autoScrollToggle.classList.remove('visible');
+              }
+            }, 2000);
+          }
+          
+          newMessagesCount = 0;
+          updateNewMessagesIndicator();
+        }
+      });
+      
+      newMessagesIndicator.addEventListener('click', () => {
+        scrollToBottom(true);
+      });
+      
+      document.addEventListener('mousemove', () => {
+        if (autoScrollPaused) {
+          resetScrollTimeout();
+        }
+      });
+      
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Alt') {
+          setInteractionMode(true);
+        }
+      });
+      
+      document.addEventListener('keyup', (e) => {
+        if (e.key === 'Alt') {
+          setInteractionMode(false);
+        }
+      });
+      
+      window.addEventListener('blur', () => {
+        setInteractionMode(false);
+      });
+      
+      dragHandle.addEventListener('mousedown', (e) => {
+        if (!altPressed) return;
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        e.preventDefault();
+      });
+      
+      resizeHandle.addEventListener('mousedown', (e) => {
+        if (!altPressed) return;
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        e.preventDefault();
+      });
+      
+      document.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+          const deltaX = e.clientX - startX;
+          const deltaY = e.clientY - startY;
+          
+          startX = e.clientX;
+          startY = e.clientY;
+          
+          window.electronAPI.moveOverlay(deltaX, deltaY);
+        } else if (isResizing) {
+          const deltaX = e.clientX - startX;
+          const deltaY = e.clientY - startY;
+          
+          startX = e.clientX;
+          startY = e.clientY;
+          
+          const width = Math.max(150, window.innerWidth + deltaX);
+          const height = Math.max(100, window.innerHeight + deltaY);
+          
+          window.electronAPI.resizeOverlay(width, height);
+        }
+      });
+      
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+        isResizing = false;
+      });
+      
+      adjustChatContainerSize();
+      forceScrollToBottom();
+      
+      setTimeout(() => {
+        addChatMessage({
+          id: 'welcome',
+          username: 'System',
+          color: '#00FF00',
+          message: 'Overlay ready! Chat will use all available space.',
+          timestamp: new Date()
+        });
+        
+        setTimeout(() => {
+          addChatMessage({
+            id: 'autoscroll-info',
+            username: 'System',
+            color: '#00FFFF',
+            message: 'Chat will auto-scroll for new messages. Scroll up to temporarily pause auto-scroll.',
+            timestamp: new Date()
+          });
+        }, 1500);
+        
+      }, 1000);
+      
+      window.addEventListener('resize', () => {
+        adjustChatContainerSize();
+        if (autoScrollEnabled) {
+          forceScrollToBottom();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
