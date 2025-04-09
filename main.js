@@ -24,11 +24,14 @@ function createMainWindow() {
     title: 'Twitch Chat Overlay',
     icon: path.join(__dirname, 'assets', 'icon.png'),
     show: false, // Don't show until ready-to-show
-    backgroundColor: '#1a1a1a'
+    backgroundColor: '#1a1a1a',
+    autoHideMenuBar: true, // Hide the menu bar by default
+    // If you want to completely remove the menu bar, uncomment the next line:
+    // frame: false, // Remove window frame completely (no title bar or menu)
   });
 
-  // Create the application menu
-  createApplicationMenu();
+  // Remove application menu completely
+  Menu.setApplicationMenu(null);
   
   // Load the main application interface
   mainWindow.loadFile('index.html');
@@ -41,23 +44,14 @@ function createMainWindow() {
   // Handle window closing
   mainWindow.on('closed', () => {
     mainWindow = null;
+    
+    // Quit the entire application when main window is closed
+    app.quit();
   });
   
-  // Handle window close attempt to confirm if user wants to exit
-  mainWindow.on('close', (e) => {
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      const choice = dialog.showMessageBoxSync(mainWindow, {
-        type: 'question',
-        buttons: ['Yes', 'No'],
-        title: 'Confirm',
-        message: 'Are you sure you want to quit? The overlay will also close.'
-      });
-      
-      if (choice === 1) {
-        e.preventDefault();
-      }
-    }
-  });
+  // Optionally remove any close confirmation if that exists
+  // since we're treating the main window as the primary controller now
+  mainWindow.removeAllListeners('close');
 }
 
 function createOverlayWindow() {
@@ -372,6 +366,13 @@ app.whenReady().then(() => {
   const savedChannel = config.get('twitchChannel');
   if (savedChannel) {
     connectToTwitch(savedChannel);
+  }
+});
+
+// Make sure overlay is closed properly
+app.on('before-quit', () => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.destroy();
   }
 });
 
