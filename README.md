@@ -2,7 +2,7 @@
 
 A desktop application that displays Twitch chat as an in-game overlay. Built with Electron, this application allows you to view chat messages while playing games in fullscreen or windowed mode. The application runs with a clean interface without a menu bar.
 
-![Twitch Chat Overlay Screenshot](assets/screenshot.png)
+<!-- ![Twitch Chat Overlay Screenshot](assets/screenshot.png) -->
 
 ## Features
 
