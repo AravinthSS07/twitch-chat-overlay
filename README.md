@@ -51,10 +51,7 @@ A desktop application that displays Twitch chat as an in-game overlay. Built wit
    - Click "Save Settings"
 
 2. **Interacting with the Overlay**:
-   - Press `Alt+Backspace` to make the overlay interactive
-   - While holding Alt, drag the top purple bar to move the overlay
-   - While holding Alt, drag the bottom-right corner to resize
-   - Release Alt to make the overlay click-through again
+   - Go into the overlay settings tab and make the required changes
 
 3. **Reading Chat**:
    - Chat messages will automatically scroll
